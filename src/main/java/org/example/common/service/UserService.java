@@ -1,6 +1,6 @@
-package org.example.part1.common.service;
+package org.example.common.service;
 
-import org.example.part1.common.pojo.User;
+import org.example.common.pojo.User;
 
 public interface UserService {
 

@@ -1,9 +1,9 @@
-package org.example.part1.Server.server.impl;
+package org.example.Server.server.impl;
 
 import lombok.AllArgsConstructor;
-import org.example.part1.Server.provider.ServiceProvider;
-import org.example.part1.Server.server.RPCServer;
-import org.example.part1.Server.server.work.WorkThread;
+import org.example.Server.provider.ServiceProvider;
+import org.example.Server.server.RPCServer;
+import org.example.Server.server.work.WorkThread;
 
 import java.io.IOException;
 import java.net.ServerSocket;

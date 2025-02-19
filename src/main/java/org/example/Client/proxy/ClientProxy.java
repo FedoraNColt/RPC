@@ -1,9 +1,11 @@
-package org.example.part1.Client.proxy;
+package org.example.Client.proxy;
 
 import lombok.AllArgsConstructor;
-import org.example.part1.Client.IOClient;
-import org.example.part1.common.message.RPCRequest;
-import org.example.part1.common.message.RPCResponse;
+import org.example.Client.rpcClient.RPCClient;
+import org.example.Client.rpcClient.impl.NettyRPCClient;
+import org.example.Client.rpcClient.impl.SimpleSocketRPCClient;
+import org.example.common.message.RPCRequest;
+import org.example.common.message.RPCResponse;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -11,9 +13,22 @@ import java.lang.reflect.Proxy;
 
 @AllArgsConstructor
 public class ClientProxy implements InvocationHandler {
+    private RPCClient rpcClient;
 
-    private String host;
-    private int port;
+    public ClientProxy(String host, int port, int choose) {
+        switch (choose) {
+            case 0:
+                rpcClient = new NettyRPCClient(host, port);
+                break;
+            case 1:
+                rpcClient = new SimpleSocketRPCClient(host, port);
+                break;
+        }
+    }
+
+    public ClientProxy(String host, int port) {
+        rpcClient = new NettyRPCClient(host, port);
+    }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -23,7 +38,7 @@ public class ClientProxy implements InvocationHandler {
                 .params(args)
                 .paramTypes(method.getParameterTypes())
                 .build();
-        RPCResponse rpcResponse = IOClient.sendRequest(host, port, rpcRequest);
+        RPCResponse rpcResponse = rpcClient.sendRequest(rpcRequest);
         return rpcResponse.getData();
     }
 

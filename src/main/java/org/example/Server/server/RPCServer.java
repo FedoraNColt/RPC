@@ -1,4 +1,4 @@
-package org.example.part1.Server.server;
+package org.example.Server.server;
 
 public interface RPCServer {
     void start(int port);

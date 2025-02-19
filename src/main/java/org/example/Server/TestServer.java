@@ -1,10 +1,10 @@
-package org.example.part1.Server;
+package org.example.Server;
 
-import org.example.part1.Server.provider.ServiceProvider;
-import org.example.part1.Server.server.RPCServer;
-import org.example.part1.Server.server.impl.SimpleRPCServer;
-import org.example.part1.common.service.UserService;
-import org.example.part1.common.service.impl.UserServiceImpl;
+import org.example.Server.provider.ServiceProvider;
+import org.example.Server.server.RPCServer;
+import org.example.Server.server.impl.NettyRPCServer;
+import org.example.common.service.UserService;
+import org.example.common.service.impl.UserServiceImpl;
 
 public class TestServer {
     public static void main(String[] args) {
@@ -13,7 +13,7 @@ public class TestServer {
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.provideServiceInterface(userService);
 
-        RPCServer rpcServer = new SimpleRPCServer(serviceProvider);
+        RPCServer rpcServer = new NettyRPCServer(serviceProvider);
         rpcServer.start(9999);
     }
 }

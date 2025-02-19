@@ -1,7 +1,7 @@
-package org.example.part1.Client;
+package org.example.Client;
 
-import org.example.part1.common.message.RPCRequest;
-import org.example.part1.common.message.RPCResponse;
+import org.example.common.message.RPCRequest;
+import org.example.common.message.RPCResponse;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

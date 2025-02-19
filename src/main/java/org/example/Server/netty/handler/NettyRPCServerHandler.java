@@ -1,35 +1,31 @@
-package org.example.Server.server.work;
+package org.example.Server.netty.handler;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.AllArgsConstructor;
 import org.example.Server.provider.ServiceProvider;
 import org.example.common.message.RPCRequest;
 import org.example.common.message.RPCResponse;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.Socket;
 
 @AllArgsConstructor
-public class WorkThread implements Runnable {
-    private Socket socket;
+public class NettyRPCServerHandler extends SimpleChannelInboundHandler<RPCRequest> {
     private ServiceProvider serviceProvider;
 
     @Override
-    public void run() {
-        try {
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+    protected void channelRead0(ChannelHandlerContext ctx, RPCRequest rpcRequest) throws Exception {
+        // receive requests, read and call service
+        RPCResponse rpcResponse = getResponse(rpcRequest);
+        ctx.writeAndFlush(rpcResponse);
+        ctx.close();
+    }
 
-            RPCRequest rpcRequest = (RPCRequest) ois.readObject();
-            RPCResponse rpcResponse = getResponse(rpcRequest);
-            oos.writeObject(rpcResponse);
-            oos.flush();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+        ctx.close();
     }
 
     private RPCResponse getResponse(RPCRequest rpcRequest) {
@@ -42,8 +38,9 @@ public class WorkThread implements Runnable {
             return RPCResponse.success(invoke);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
-            System.out.println("Failed to invoke method " + rpcRequest.getMethodName());
+            System.out.println("Errors when executing " + rpcRequest.getMethodName());
             return RPCResponse.fail();
         }
+
     }
 }

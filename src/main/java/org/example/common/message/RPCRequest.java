@@ -1,4 +1,4 @@
-package org.example.part1.common.message;
+package org.example.common.message;
 
 import lombok.Builder;
 import lombok.Data;

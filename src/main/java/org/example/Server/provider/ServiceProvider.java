@@ -1,4 +1,4 @@
-package org.example.part1.Server.provider;
+package org.example.Server.provider;
 
 import java.util.HashMap;
 import java.util.Map;

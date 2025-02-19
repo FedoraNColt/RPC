@@ -1,4 +1,9 @@
 package org.example.Client.rpcClient;
 
-public class RPCClient {
+import org.example.common.message.RPCRequest;
+import org.example.common.message.RPCResponse;
+
+public interface RPCClient {
+
+    RPCResponse sendRequest(RPCRequest request);
 }
