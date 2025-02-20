@@ -18,7 +18,7 @@ public class ClientProxy implements InvocationHandler {
     public ClientProxy(String host, int port, int choose) {
         switch (choose) {
             case 0:
-                rpcClient = new NettyRPCClient(host, port);
+                rpcClient = new NettyRPCClient();
                 break;
             case 1:
                 rpcClient = new SimpleSocketRPCClient(host, port);
@@ -26,8 +26,8 @@ public class ClientProxy implements InvocationHandler {
         }
     }
 
-    public ClientProxy(String host, int port) {
-        rpcClient = new NettyRPCClient(host, port);
+    public ClientProxy() {
+        rpcClient = new NettyRPCClient();
     }
 
     @Override
