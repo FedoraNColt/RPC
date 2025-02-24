@@ -16,7 +16,7 @@ public class NettyRPCServerHandler extends SimpleChannelInboundHandler<RPCReques
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, RPCRequest rpcRequest) throws Exception {
-        // receive requests, read and call service
+        // Receive requests, read and call the service
         RPCResponse rpcResponse = getResponse(rpcRequest);
         ctx.writeAndFlush(rpcResponse);
         ctx.close();
@@ -30,10 +30,12 @@ public class NettyRPCServerHandler extends SimpleChannelInboundHandler<RPCReques
 
     private RPCResponse getResponse(RPCRequest rpcRequest) {
         String interfaceName = rpcRequest.getInterfaceName();
+        // Get the corresponding service implementation class on the server side
         Object service = serviceProvider.getService(interfaceName);
         Method method = null;
         try {
             method = service.getClass().getMethod(rpcRequest.getMethodName(), rpcRequest.getParamTypes());
+            // Invoke the method using reflection and get the result
             Object res = method.invoke(service, rpcRequest.getParams());
             return RPCResponse.success(res);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {

@@ -25,16 +25,21 @@ public class ZKServiceRegister implements ServiceRegister {
         System.out.println("Connected to zookeeper successfully.");
     }
 
+    // Registers a service instance in the service registry
     @Override
     public void register(String serviceName, InetSocketAddress serviceAddress) {
         try {
+            // Create a persistent node for the service if it doesn't exist
+            // When the service provider is down, only keep the service and delete the service address
             if (client.checkExists().forPath("/" + serviceName) == null) {
                 client.create()
                         .creatingParentsIfNeeded()
                         .withMode(CreateMode.PERSISTENT)
                         .forPath("/" + serviceName);
             }
+            // Construct the path for the service instance, where each child node represents an instance
             String path = "/" + serviceName + "/" + getServiceAddress(serviceAddress);
+            // Ephemeral nodes are temporary and will be removed when the service disconnects
             client.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
@@ -44,6 +49,7 @@ public class ZKServiceRegister implements ServiceRegister {
         }
     }
 
+    // Converts an InetSocketAddress into a string formatted as "IP:port"
     private String getServiceAddress(InetSocketAddress serverAddress) {
         return serverAddress.getHostName() +
                 ":" +

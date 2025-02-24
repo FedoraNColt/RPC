@@ -31,6 +31,7 @@ public class NettyRPCClient implements RPCClient {
         bootstrap = new Bootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioSocketChannel.class)
+                // Configure Netty's message handling mechanism
                 .handler(new NettyClientInitializer());
     }
 
@@ -41,12 +42,20 @@ public class NettyRPCClient implements RPCClient {
         String host = address.getHostName();
         int port = address.getPort();
         try {
+            // Create a ChannelFuture object, representing this operation event
+            // The sync method blocks until the connect operation is complete
             ChannelFuture channelFuture = bootstrap.connect(host, port).sync();
             Channel channel = channelFuture.channel();
+            // Send the request to the server
             channel.writeAndFlush(request);
             System.out.println("RPCRequest is sent to " + host + ":" + port);
             // sync() blocks to get response
             channel.closeFuture().sync();
+            // Obtain results in a blocking manner
+            // Assign an alias to the channel to retrieve content from the channel with a specific name (this is set in the handler)
+            // AttributeKey is thread-isolated and does not have thread safety issues
+            // In the current scenario, choosing to obtain results in a blocking manner
+            // In other scenarios, a listener can be added to asynchronously obtain results using channelFuture.addListener...
             AttributeKey<RPCResponse> key = AttributeKey.valueOf("RPCResponse");
             RPCResponse response = channel.attr(key).get();
 

@@ -11,6 +11,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 @AllArgsConstructor
+// Pass in the Class object of the service interface to encapsulate it into a request using reflection
+// In the RPCClientProxy class, add an RPCClient variable to allow passing different clients (simple, netty)
+// and invoke the common sendRequest interface to send requests
 public class ClientProxy implements InvocationHandler {
     private RPCClient rpcClient;
 
