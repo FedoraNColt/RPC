@@ -1,6 +1,7 @@
 package Client.serviceCentre;
 
 import Client.cache.ServiceCache;
+import Client.serviceCentre.balancer.impl.ConsistentHashingLoadBalancer;
 import Client.serviceCentre.watcher.ZKwatcher;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -63,8 +64,8 @@ public class ZKServiceCentre implements ServiceCentre {
                 serviceList = client.getChildren().forPath("/" + serviceName);
             }
 
-            // Select the first available instance (can be extended to implement load balancing)
-            String address = serviceList.get(0);
+            // Select the available instance by load balancing
+            String address = new ConsistentHashingLoadBalancer().balance(serviceList);
             // Convert the "IP:port" string into an InetSocketAddress for easier client communication
             return parseAddress(address);
         } catch (Exception e) {
