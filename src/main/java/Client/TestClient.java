@@ -5,7 +5,7 @@ import common.pojo.User;
 import common.service.UserService;
 
 public class TestClient {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         // Outdated  way to initialize ClientProxy with a specific server address and port
         // ClientProxy clientProxy = new ClientProxy("127.0.0.1", 9999);
 
