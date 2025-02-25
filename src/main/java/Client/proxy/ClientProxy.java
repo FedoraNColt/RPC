@@ -28,7 +28,7 @@ public class ClientProxy implements InvocationHandler {
 //        }
 //    }
 
-    public ClientProxy() {
+    public ClientProxy() throws InterruptedException {
         rpcClient = new NettyRPCClient();
     }
 

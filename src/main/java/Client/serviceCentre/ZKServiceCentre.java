@@ -1,5 +1,7 @@
 package Client.serviceCentre;
 
+import Client.cache.ServiceCache;
+import Client.serviceCentre.watcher.ZKwatcher;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -13,9 +15,15 @@ public class ZKServiceCentre implements ServiceCentre {
     private CuratorFramework client;
     // zookeeper root path node
     private static final String ROOT_PATH = "MyRPC";
+    private ServiceCache serviceCache;
 
-    // Initializes the Zookeeper client and establishes a connection to the Zookeeper server
-    public ZKServiceCentre() {
+    /**
+     * Initializes the ZooKeeper client and establishes a connection.
+     * The client connects to the ZooKeeper server and starts listening for updates.
+     *
+     * @throws InterruptedException if the thread is interrupted while waiting for ZooKeeper connection.
+     */
+    public ZKServiceCentre() throws InterruptedException {
         RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
 
         // The server address of zookeeper is fixed, so both service providers and clients must connect to it.
@@ -32,19 +40,31 @@ public class ZKServiceCentre implements ServiceCentre {
                 .build();
         this.client.start();
         System.out.println("Connected to zookeeper successfully.");
+        this.serviceCache = new ServiceCache();
+        ZKwatcher zKwatcher = new ZKwatcher(client, serviceCache);
+        zKwatcher.watchToUpdate(ROOT_PATH);
     }
 
+    /**
+     * Discovers a service instance by retrieving its address from ZooKeeper.
+     * If the service is cached, it returns a cached address; otherwise, it queries ZooKeeper.
+     *
+     * @param serviceName The name of the service to discover.
+     * @return The address of a service instance, or null if the service is not found.
+     */
     @Override
-    // Retrieves the service address based on the service name (interface name)
     public InetSocketAddress serviceDiscovery(String serviceName) {
         try {
-            // Retrieve all child nodes under the given service name
-            // These child nodes typically store service instance addresses in the format "IP:port"
-            List<String> strings = client.getChildren().forPath("/" + serviceName);
+            // Checks if the service is already stored in the cache
+            List<String> serviceList = serviceCache.getServiceFromCache(serviceName);
+            if (serviceList == null) {
+                // Retrieves all child nodes under the service name in ZooKeeper
+                // Each child node represents an instance of the service with an address in "IP:port" format
+                serviceList = client.getChildren().forPath("/" + serviceName);
+            }
 
             // Select the first available instance (can be extended to implement load balancing)
-            String address = strings.get(0);
-
+            String address = serviceList.get(0);
             // Convert the "IP:port" string into an InetSocketAddress for easier client communication
             return parseAddress(address);
         } catch (Exception e) {
@@ -53,9 +73,14 @@ public class ZKServiceCentre implements ServiceCentre {
         return null;
     }
 
-    // Parses a string formatted as "IP:port" into an InetSocketAddress
-    private InetSocketAddress parseAddress(String serviceName) {
-        String[] res = serviceName.split(":");
+    /**
+     * Parses a service address string formatted as "IP:port" into an InetSocketAddress.
+     *
+     * @param address The service address string in "IP:port" format.
+     * @return The corresponding InetSocketAddress object.
+     */
+    private InetSocketAddress parseAddress(String address) {
+        String[] res = address.split(":");
         return new InetSocketAddress(res[0], Integer.parseInt(res[1]));
     }
 }
