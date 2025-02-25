@@ -82,7 +82,7 @@ public class ConsistentHashingLoadBalancer implements LoadBalancer {
         } else {
             key = subMap.firstKey();
         }
-        String virtualNode = serviceList.get(key);
+        String virtualNode = shardMap.get(key);
         return virtualNode.substring(0, virtualNode.indexOf("&&VN"));
     }
 
