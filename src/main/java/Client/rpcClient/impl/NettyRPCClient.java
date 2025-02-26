@@ -19,13 +19,13 @@ import java.net.InetSocketAddress;
 public class NettyRPCClient implements RPCClient {
     private static final Bootstrap bootstrap;
     private static final EventLoopGroup eventLoopGroup;
-    private ServiceCentre serviceCentre;
+    private final ServiceCentre serviceCentre;
 
-    public NettyRPCClient() throws InterruptedException {
-        this.serviceCentre = new ZKServiceCentre();
+    public NettyRPCClient(ServiceCentre serviceCentre) throws InterruptedException {
+        this.serviceCentre = serviceCentre;
     }
 
-    // Initialize the netty server
+    // Initializes the netty server
     static {
         eventLoopGroup = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
