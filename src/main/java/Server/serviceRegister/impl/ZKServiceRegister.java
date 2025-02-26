@@ -12,6 +12,7 @@ import java.net.InetSocketAddress;
 public class ZKServiceRegister implements ServiceRegister {
     private CuratorFramework client;
     private static final String ROOT_PATH = "MyRPC";
+    private static final String RETRY = "CanRetry";
 
     public ZKServiceRegister() {
         RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
@@ -27,7 +28,7 @@ public class ZKServiceRegister implements ServiceRegister {
 
     // Registers a service instance in the service registry
     @Override
-    public void register(String serviceName, InetSocketAddress serviceAddress) {
+    public void register(String serviceName, InetSocketAddress serviceAddress, boolean canRetry) {
         try {
             // Create a persistent node for the service if it doesn't exist
             // When the service provider is down, only keep the service and delete the service address
@@ -44,6 +45,13 @@ public class ZKServiceRegister implements ServiceRegister {
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(path);
+            if (canRetry) {
+                path = "/" + RETRY + "/" + serviceName;
+                client.create()
+                        .creatingParentsIfNeeded()
+                        .withMode(CreateMode.EPHEMERAL)
+                        .forPath(path);
+            }
         } catch (Exception e) {
             System.out.println("Service already exists: " + serviceName);
         }

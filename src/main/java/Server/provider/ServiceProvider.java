@@ -21,7 +21,7 @@ public class ServiceProvider {
         interfaceProvider = new HashMap<>();
     }
 
-    public void provideServiceInterface(Object service) {
+    public void provideServiceInterface(Object service, boolean canRetry) {
         // Retrieves all implemented interfaces of the service
         Class<?>[] interfaceNames = service.getClass().getInterfaces();
 
@@ -29,7 +29,7 @@ public class ServiceProvider {
             // Stores the mapping between interface names and service implementations locally
             interfaceProvider.put(clazz.getName(), service);
             // Registers the service interface in the service registry (e.g., Zookeeper)
-            serviceRegister.register(clazz.getName(), new InetSocketAddress(host, port));
+            serviceRegister.register(clazz.getName(), new InetSocketAddress(host, port), canRetry);
         }
     }
 

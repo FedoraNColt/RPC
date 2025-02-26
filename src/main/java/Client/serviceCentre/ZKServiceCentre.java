@@ -11,11 +11,15 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+/**
+ * Implementation of ServiceCenter that uses ZooKeeper for service discovery.
+ */
 public class ZKServiceCentre implements ServiceCentre {
     // Curator provides the zookeeper client
     private CuratorFramework client;
     // zookeeper root path node
     private static final String ROOT_PATH = "MyRPC";
+    private static final String RETRY = "CanRetry";
     private ServiceCache serviceCache;
 
     /**
@@ -41,8 +45,11 @@ public class ZKServiceCentre implements ServiceCentre {
                 .build();
         this.client.start();
         System.out.println("Connected to zookeeper successfully.");
+
         this.serviceCache = new ServiceCache();
+
         ZKwatcher zKwatcher = new ZKwatcher(client, serviceCache);
+
         zKwatcher.watchToUpdate(ROOT_PATH);
     }
 
@@ -72,6 +79,29 @@ public class ZKServiceCentre implements ServiceCentre {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Checks whether the given service is eligible for retry.
+     *
+     * @param serviceName The name of the service.
+     * @return true if the service is allowed to retry, false otherwise.
+     */
+    @Override
+    public boolean checkRetry(String serviceName) {
+        boolean canRetry = false;
+        try {
+            List<String> serviceList = client.getChildren().forPath("/" + RETRY);
+            for (String service : serviceList) {
+                if (service.equals(serviceName)) {
+                    System.out.println("Service " + serviceName + " is on the whitelist and can be retried.");
+                    canRetry = true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return canRetry;
     }
 
     /**
