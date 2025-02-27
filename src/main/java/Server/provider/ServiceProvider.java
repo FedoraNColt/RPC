@@ -1,7 +1,10 @@
 package Server.provider;
 
+import Server.ratelimit.RateLimit;
+import Server.ratelimit.provider.RateLimitProvider;
 import Server.serviceRegister.ServiceRegister;
 import Server.serviceRegister.impl.ZKServiceRegister;
+import lombok.Getter;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -12,6 +15,8 @@ public class ServiceProvider {
     private String host;
     private int port;
     private ServiceRegister serviceRegister;
+    @Getter
+    private RateLimitProvider rateLimitProvider;
 
     public ServiceProvider(String host, int port) {
         // Pass in the network address of service provider
@@ -19,6 +24,7 @@ public class ServiceProvider {
         this.port = port;
         serviceRegister = new ZKServiceRegister();
         interfaceProvider = new HashMap<>();
+        rateLimitProvider = new RateLimitProvider();
     }
 
     public void provideServiceInterface(Object service, boolean canRetry) {

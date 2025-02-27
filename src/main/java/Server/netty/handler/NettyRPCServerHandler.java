@@ -1,5 +1,6 @@
 package Server.netty.handler;
 
+import Server.ratelimit.RateLimit;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.AllArgsConstructor;
@@ -28,8 +29,22 @@ public class NettyRPCServerHandler extends SimpleChannelInboundHandler<RPCReques
         ctx.close();
     }
 
+    /**
+     * Executes an RPC request by acquiring a rate-limit token and invoking the target method via reflection.
+     *
+     * @param rpcRequest The incoming RPC request containing the service name, method name, parameter types, and arguments.
+     * @return An {@code RpcResponse} indicating either a success with the method result or a failure if throttled or an error occurs.
+     */
     private RPCResponse getResponse(RPCRequest rpcRequest) {
         String interfaceName = rpcRequest.getInterfaceName();
+        // Acquire a rate-limit token for this interface to manage traffic
+        RateLimit rateLimit = serviceProvider.getRateLimitProvider().getRateLimit(interfaceName);
+        if (!rateLimit.getToken()) {
+            // If acquiring the token fails, apply rate limiting and quickly return a failed response
+            System.out.println("Service throttled! Returning failure response.");
+            return RPCResponse.fail();
+        }
+
         // Get the corresponding service implementation class on the server side
         Object service = serviceProvider.getService(interfaceName);
         Method method = null;
