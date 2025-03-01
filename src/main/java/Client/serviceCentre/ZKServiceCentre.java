@@ -64,15 +64,15 @@ public class ZKServiceCentre implements ServiceCentre {
     public InetSocketAddress serviceDiscovery(String serviceName) {
         try {
             // Checks if the service is already stored in the cache
-            List<String> serviceList = serviceCache.getServiceFromCache(serviceName);
-            if (serviceList == null) {
+            List<String> addressList = serviceCache.getServiceFromCache(serviceName);
+            if (addressList == null) {
                 // Retrieves all child nodes under the service name in ZooKeeper
                 // Each child node represents an instance of the service with an address in "IP:port" format
-                serviceList = client.getChildren().forPath("/" + serviceName);
+                addressList = client.getChildren().forPath("/" + serviceName);
             }
 
             // Select the available instance by load balancing
-            String address = new ConsistentHashingLoadBalancer().balance(serviceList);
+            String address = new ConsistentHashingLoadBalancer().balance(addressList);
             // Convert the "IP:port" string into an InetSocketAddress for easier client communication
             return parseAddress(address);
         } catch (Exception e) {

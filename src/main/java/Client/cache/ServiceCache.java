@@ -16,10 +16,9 @@ public class ServiceCache {
      * @param address The address of the service instance.
      */
     public void addServiceToCache(String serviceName, String address) {
-        if (!cache.containsKey(serviceName)) {
+        if (cache.containsKey(serviceName)) {
             List<String> addressList = cache.get(serviceName);
             addressList.add(address);
-            System.out.println("Service " + serviceName + " with address of " + address +" added to the localcache");
         } else {
             List<String> addressList = new ArrayList<>();
             addressList.add(address);
@@ -36,7 +35,7 @@ public class ServiceCache {
      * @param newAddress The new address to be added.
      */
     public void replaceServiceAddress(String serviceName, String oldAddress, String newAddress) {
-        if (!cache.containsKey(serviceName)) {
+        if (cache.containsKey(serviceName)) {
             List<String> addressList = cache.get(serviceName);
             addressList.remove(oldAddress);
             addressList.add(newAddress);

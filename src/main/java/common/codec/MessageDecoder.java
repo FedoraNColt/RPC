@@ -30,6 +30,7 @@ public class MessageDecoder extends ByteToMessageDecoder {
         byte[] bytes = new byte[length];
         // Reads the serialized bytes into the allocated array
         in.readBytes(bytes);
+        System.out.println("bytes = " + new String(bytes));
         // Deserializes the byte array into a Java object
         Object deserialized = serializer.deserialize(bytes, messageType);
         // Adds the deserialized object to the output list for further processing in the pipeline

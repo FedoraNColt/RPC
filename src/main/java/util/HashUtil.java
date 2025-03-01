@@ -25,6 +25,6 @@ public class HashUtil {
         }
 
         // Ensure the hash is non-negative
-        return hash < 0 ? Math.abs(hash) : hash;
+        return Math.abs(hash);
     }
 }

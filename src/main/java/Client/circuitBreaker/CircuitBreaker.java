@@ -36,22 +36,25 @@ public class CircuitBreaker {
      */
     public synchronized boolean allowRequest() {
         long currentTime = System.currentTimeMillis();
-        System.out.println("Before circuit breaker switch. Current failure count: " + failureCount);
+        System.out.println("Before circuit breaker switch. Current failure count: " + failureCount.get());
         switch (state) {
             case OPEN:
                 if (currentTime - lastFailureTime > retryTimePeriod) {
-                    // If the reset time period has elapsed, transition to HALF_OPEN and allow a request
+                    System.out.println("Retry period elapsed. Transitioning from OPEN to HALF_OPEN state.");
                     state = CircuitBreakerState.HALF_OPEN;
                     resetCounts();
                     return true;
                 }
-                System.out.println("Circuit breaker activated.");
+                System.out.println("Circuit breaker is OPEN. Request denied.");
                 return false;
             case HALF_OPEN:
                 requestCount.incrementAndGet();
+                System.out.println("HALF_OPEN state: Allowing limited request. Request count: " + requestCount.get());
+                return true;
+            case CLOSED:
                 return true;
             default:
-                return true;
+                throw new IllegalStateException("Unexpected CircuitBreaker state: " + state);
         }
     }
 
@@ -62,12 +65,15 @@ public class CircuitBreaker {
     public synchronized void recordSuccess() {
         if (state == CircuitBreakerState.HALF_OPEN) {
             successCount.incrementAndGet();
+            System.out.println("HALF_OPEN state: Recorded success.\nSuccess count: " + successCount.get() +
+                    " out of " + requestCount.get() + " requests.");
             // If success rate meets or exceeds the threshold, transition to CLOSED state
             if (successCount.get() >= halfOpenSuccessRate * requestCount.get()) {
+                System.out.println("Success threshold met. Transitioning to CLOSED state.");
                 state = CircuitBreakerState.CLOSED; // Restore normal operation
                 resetCounts();
             }
-        } else {
+        } else if (state == CircuitBreakerState.CLOSED) {
             resetCounts();
         }
     }
@@ -86,6 +92,26 @@ public class CircuitBreaker {
         } else if (failureCount.get() >= failureThreshold) {
             // If failures exceed the threshold, transition to OPEN
             state = CircuitBreakerState.OPEN;
+        }
+    }
+
+    /**
+     * Records a response code.
+     * 200 is considered a success and 500 a failure.
+     *
+     * @param code Response code to record.
+     */
+    public void record(int code) {
+        switch (code) {
+            case 200:
+                recordSuccess();
+                break;
+            case 500:
+                recordFailure();
+                break;
+            default:
+                System.out.println("Unrecognized response code: " + code);
+                break;
         }
     }
 
