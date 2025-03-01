@@ -22,7 +22,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Integer insertUserId(User user) {
-        System.out.println("User: " + user.getUserName() + "is inserted successfully");
+        System.out.println("User: " + user.getUserName() + " is inserted successfully");
         return user.getId();
     }
 }

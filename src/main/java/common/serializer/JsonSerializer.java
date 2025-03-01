@@ -60,7 +60,10 @@ public class JsonSerializer implements Serializer {
             case 1:
                 // Convert the byte array into an RPCResponse object
                 RPCResponse rpcResponse = JSON.parseObject(bytes, RPCResponse.class);
-
+                if (rpcResponse.getDataType() == null) {
+                    obj = RPCResponse.fail();
+                    break;
+                }
                 // Retrieve the expected return data type
                 Class<?> dataType = rpcResponse.getDataType();
                 Object data = rpcResponse.getData();

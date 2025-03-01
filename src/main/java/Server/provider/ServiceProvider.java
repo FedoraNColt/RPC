@@ -1,6 +1,5 @@
 package Server.provider;
 
-import Server.ratelimit.RateLimit;
 import Server.ratelimit.provider.RateLimitProvider;
 import Server.serviceRegister.ServiceRegister;
 import Server.serviceRegister.impl.ZKServiceRegister;

@@ -1,5 +1,7 @@
 package Client.proxy;
 
+import Client.circuitBreaker.CircuitBreaker;
+import Client.circuitBreaker.CircuitBreakerProvider;
 import Client.retry.GuavaRetry;
 import Client.serviceCentre.ServiceCentre;
 import Client.serviceCentre.ZKServiceCentre;
@@ -20,6 +22,7 @@ import java.lang.reflect.Proxy;
 public class ClientProxy implements InvocationHandler {
     private RPCClient rpcClient;
     private ServiceCentre serviceCentre;
+    private CircuitBreakerProvider circuitBreakerProvider;
 
 //    public ClientProxy(String host, int port, int choose) {
 //        switch (choose) {
@@ -35,6 +38,7 @@ public class ClientProxy implements InvocationHandler {
     public ClientProxy() throws InterruptedException {
         serviceCentre = new ZKServiceCentre();
         rpcClient = new NettyRPCClient(serviceCentre);
+        circuitBreakerProvider = new CircuitBreakerProvider();
     }
 
     @Override
@@ -46,12 +50,20 @@ public class ClientProxy implements InvocationHandler {
                 .params(args)
                 .paramTypes(method.getParameterTypes())
                 .build();
+
+        CircuitBreaker circuitBreaker = circuitBreakerProvider.getCircuitBreaker(method.getName());
+        if (!circuitBreaker.allowRequest()) {
+            return null;
+        }
+
         RPCResponse rpcResponse;
         if (serviceCentre.checkRetry(rpcRequest.getInterfaceName())) {
             rpcResponse = new GuavaRetry().sendServiceWithRetry(rpcRequest, rpcClient);
         } else {
             rpcResponse = rpcClient.sendRequest(rpcRequest);
         }
+
+        circuitBreaker.record(rpcResponse.getCode());
         return rpcResponse.getData();
     }
 
