@@ -1,5 +1,6 @@
 package org.example;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.client.proxy.ClientProxy;
 import org.example.pojo.User;
 import org.example.service.UserService;
@@ -8,7 +9,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class ConsumerTest {
+
+    private static final int THREAD_POOL_SIZE = 20;
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+
     public static void main(String[] args) throws InterruptedException {
         // Outdated  way to initialize ClientProxy with a specific server address and port
         // ClientProxy clientProxy = new ClientProxy("127.0.0.1", 9999);
@@ -17,28 +23,29 @@ public class ConsumerTest {
         ClientProxy clientProxy = new ClientProxy();
         UserService proxy  = clientProxy.getProxy(UserService.class);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
-
-
         for (int i = 0; i < 120; i++) {
-            Integer id = i;
+            final Integer id = i;
             if (i % 30 == 0) {
                 Thread.sleep(10000);
             }
             executorService.submit(() -> {
                 try {
                     User user = proxy.getUserByUserId(id);
-                    System.out.println("Get user from server: user = " + user);
+                    log.info("Get user from server: user = {}", user);
 
                     User u = User.builder()
                             .id(id)
-                            .userName("User" + id.toString())
+                            .userName("User" + id)
                             .gender(true)
                             .build();
                     Integer userId = proxy.insertUserId(u);
-                    System.out.println("Insert user into server: user = " + userId);
+                    if (userId != null) {
+                        log.info("Insert user into server: userId = {}", userId);
+                    } else {
+                        log.warn("Failed to insert user: userId = {}", id);
+                    }
                 } catch (NullPointerException e) {
-                    System.out.println("User not found");
+                    log.error("User not found");
                     e.printStackTrace();
                 }
             });
@@ -50,17 +57,6 @@ public class ConsumerTest {
             executorService.shutdownNow();
         }
 
-        System.out.println("All tasks completed. Done!");
-
-//        User user = proxy.getUserByUserId(1);
-//        System.out.println("Get user from server: user = " + user);
-//
-//        User u = User.builder()
-//                .id(100)
-//                .userName("gzj")
-//                .sex(true)
-//                .build();
-//        Integer id = proxy.insertUserId(u);
-//        System.out.println("Insert user into server: user = " + id);
+        log.info("All tasks completed. Done!");
     }
 }

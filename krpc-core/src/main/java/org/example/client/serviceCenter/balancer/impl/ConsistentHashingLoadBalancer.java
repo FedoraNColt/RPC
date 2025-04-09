@@ -23,6 +23,10 @@ public class ConsistentHashingLoadBalancer implements LoadBalancer {
      */
     @Override
     public String balance(List<String> addressList) {
+        if (addressList == null || addressList.isEmpty()) {
+            throw new IllegalArgumentException("Address List is null or empty");
+        }
+
         // Generate a random UUID as the requesting node
         String randomStr = UUID.randomUUID().toString();
         return getServer(randomStr, addressList);
@@ -72,8 +76,8 @@ public class ConsistentHashingLoadBalancer implements LoadBalancer {
      * @param serviceList The list of available server nodes
      * @return The selected server node
      */
-    private String getServer(String node, List<String> serviceList) {
-        init(serviceList);
+    public String getServer(String node, List<String> serviceList) {
+        if (shardMap.isEmpty()) init(serviceList);
         int hash = getHash(node);
         Integer key = null;
         SortedMap<Integer, String> subMap = shardMap.tailMap(hash);
