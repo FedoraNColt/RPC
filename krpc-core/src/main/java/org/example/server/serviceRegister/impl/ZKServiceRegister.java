@@ -23,37 +23,78 @@ public class ZKServiceRegister implements ServiceRegister {
                     .namespace(ROOT_PATH)
                     .build();
         this.client.start();
-        System.out.println("Connected to zookeeper successfully.");
+        
+        try {
+            // Wait for connection to be established
+            this.client.blockUntilConnected();
+            System.out.println("Connected to ZooKeeper successfully.");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Failed to connect to ZooKeeper", e);
+        }
     }
 
     // Registers a service instance in the service registry
     @Override
     public void register(String serviceName, InetSocketAddress serviceAddress, boolean canRetry) {
+        if (serviceName == null || serviceName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Service name cannot be null or empty");
+        }
+        if (serviceAddress == null) {
+            throw new IllegalArgumentException("Service address cannot be null");
+        }
+
         try {
-            // Create a persistent node for the service if it doesn't exist
-            // When the service provider is down, only keep the service and delete the service address
-            if (client.checkExists().forPath("/" + serviceName) == null) {
+            // Create persistent root node for the service type (survives provider restarts)
+            String serviceRoot = "/" + serviceName;
+            if (client.checkExists().forPath(serviceRoot) == null) {
                 client.create()
                         .creatingParentsIfNeeded()
                         .withMode(CreateMode.PERSISTENT)
-                        .forPath("/" + serviceName);
+                        .forPath(serviceRoot);
+                System.out.println("Created service root path: " + serviceRoot);
             }
-            // Construct the path for the service instance, where each child node represents an instance
-            String path = "/" + serviceName + "/" + getServiceAddress(serviceAddress);
-            // Ephemeral nodes are temporary and will be removed when the service disconnects
+
+            // Create ephemeral node for this specific service instance (auto-deleted when provider disconnects)
+            String serviceInstancePath = serviceRoot + "/" + getServiceAddress(serviceAddress);
+            
+            // Check if this exact service instance is already registered
+            if (client.checkExists().forPath(serviceInstancePath) != null) {
+                System.out.println("Service instance already registered: " + serviceInstancePath);
+                return;
+            }
+
+            // Register the service instance (ephemeral node ensures cleanup on disconnect)
             client.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
-                    .forPath(path);
+                    .forPath(serviceInstancePath);
+            System.out.println("Registered service instance: " + serviceInstancePath);
+
+            // Add service to retry whitelist if retry is enabled
             if (canRetry) {
-                path = "/" + RETRY + "/" + serviceName;
-                client.create()
-                        .creatingParentsIfNeeded()
-                        .withMode(CreateMode.EPHEMERAL)
-                        .forPath(path);
+                String retryRoot = "/" + RETRY;
+                if (client.checkExists().forPath(retryRoot) == null) {
+                    client.create()
+                            .creatingParentsIfNeeded()
+                            .withMode(CreateMode.PERSISTENT)
+                            .forPath(retryRoot);
+                }
+                
+                String retryPath = retryRoot + "/" + serviceName;
+                if (client.checkExists().forPath(retryPath) == null) {
+                    client.create()
+                            .creatingParentsIfNeeded()
+                            .withMode(CreateMode.EPHEMERAL)
+                            .forPath(retryPath);
+                    System.out.println("Registered service for retry: " + retryPath);
+                }
             }
+            
         } catch (Exception e) {
-            System.out.println("Service already exists: " + serviceName);
+            System.err.println("Failed to register service " + serviceName + " at " + getServiceAddress(serviceAddress) + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Service registration failed", e);
         }
     }
 
@@ -62,5 +103,19 @@ public class ZKServiceRegister implements ServiceRegister {
         return serverAddress.getHostName() +
                 ":" +
                 serverAddress.getPort();
+    }
+
+    /**
+     * Shutdown the ZooKeeper client and release resources
+     */
+    public void shutdown() {
+        if (client != null) {
+            try {
+                client.close();
+                System.out.println("ZooKeeper service register shutdown completed.");
+            } catch (Exception e) {
+                System.err.println("Error shutting down ZooKeeper client: " + e.getMessage());
+            }
+        }
     }
 }

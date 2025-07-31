@@ -71,11 +71,22 @@ public class ZKServiceCenter implements ServiceCenter {
                 addressList = client.getChildren().forPath("/" + serviceName);
             }
 
+            if (addressList == null || addressList.isEmpty()) {
+                System.err.println("No service instances found for service: " + serviceName);
+                return null;
+            }
+
             // Select the available instance by load balancing
             String address = new ConsistentHashingLoadBalancer().balance(addressList);
+            if (address == null || address.trim().isEmpty()) {
+                System.err.println("Load balancer returned null/empty address for service: " + serviceName);
+                return null;
+            }
+            
             // Convert the "IP:port" string into an InetSocketAddress for easier client communication
             return parseAddress(address);
         } catch (Exception e) {
+            System.err.println("Failed to discover service " + serviceName + ": " + e.getMessage());
             e.printStackTrace();
         }
         return null;
