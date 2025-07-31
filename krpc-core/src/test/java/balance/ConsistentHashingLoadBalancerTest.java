@@ -1,6 +1,7 @@
 package balance;
 
 import org.example.client.serviceCenter.balancer.impl.ConsistentHashingLoadBalancer;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

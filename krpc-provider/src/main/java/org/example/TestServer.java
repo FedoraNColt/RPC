@@ -14,6 +14,19 @@ public class TestServer {
         serviceProvider.provideServiceInterface(userService, true);
 
         RPCServer rpcServer = new NettyRPCServer(serviceProvider);
-        rpcServer.start(9999);
+        
+        // Add shutdown hook for graceful shutdown
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down RPC server...");
+            rpcServer.stop();
+        }));
+        
+        try {
+            rpcServer.start(9999);
+        } catch (Exception e) {
+            System.err.println("Failed to start RPC server: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
     }
 }

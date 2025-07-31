@@ -72,7 +72,7 @@ public class ConsistentHashingLoadBalancer implements LoadBalancer {
     /**
      * Selects the appropriate server for a given request node using consistent hashing.
      *
-     * @param node        The requesting node (e.g., client making a request)
+     * @param node        The requesting node (e.g., a client making a request)
      * @param serviceList The list of available server nodes
      * @return The selected server node
      */
