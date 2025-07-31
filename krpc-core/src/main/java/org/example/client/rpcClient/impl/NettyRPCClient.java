@@ -24,45 +24,68 @@ public class NettyRPCClient implements RPCClient {
         this.serviceCentre = serviceCentre;
     }
 
-    // Initializes the netty server
+    // Initialize the Netty client bootstrap and event loop group
     static {
         eventLoopGroup = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioSocketChannel.class)
-                // Configure Netty's message handling mechanism
+                // Set up the client-side channel pipeline
                 .handler(new NettyClientInitializer());
     }
 
     @Override
     public RPCResponse sendRequest(RPCRequest request) {
-        // Get host and port from the service discovery
+        // Discover service instance location
         InetSocketAddress address = serviceCentre.serviceDiscovery(request.getInterfaceName());
+        if (address == null) {
+            throw new RuntimeException("No available service instance found for " + request.getInterfaceName());
+        }
+        
         String host = address.getHostName();
         int port = address.getPort();
+        Channel channel = null;
         try {
-            // Create a ChannelFuture object, representing this operation event
-            // The sync method blocks until the connect operation is complete
+            // Establish connection to the server and wait for completion
             ChannelFuture channelFuture = bootstrap.connect(host, port).sync();
-            Channel channel = channelFuture.channel();
-            // Send the request to the server
+            channel = channelFuture.channel();
+            
+            // Send the RPC request
             channel.writeAndFlush(request);
             System.out.println("RPCRequest is sent to " + host + ":" + port);
-            // sync() blocks to get response
+            
+            // Wait for the channel to close (indicating response received)
             channel.closeFuture().sync();
-            // Obtain results in a blocking manner
-            // Assign an alias to the channel to retrieve content from the channel with a specific name (this is set in the handler)
-            // AttributeKey is thread-isolated and does not have thread safety issues
-            // In the current scenario, choosing to obtain results in a blocking manner
-            // In other scenarios, a listener can be added to asynchronously obtain results using channelFuture.addListener...
+            
+            // Retrieve response from channel attributes (set by the client handler)
             AttributeKey<RPCResponse> key = AttributeKey.valueOf("RPCResponse");
             RPCResponse response = channel.attr(key).get();
 
             System.out.println(response);
             return response;
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Request interrupted", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send request to " + host + ":" + port, e);
+        } finally {
+            // Ensure channel is properly closed
+            if (channel != null && channel.isOpen()) {
+                try {
+                    channel.close().sync();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
-        return null;
+    }
+
+    /**
+     * Shutdown the Netty client and release resources
+     */
+    public static void shutdown() {
+        if (eventLoopGroup != null && !eventLoopGroup.isShutdown()) {
+            eventLoopGroup.shutdownGracefully();
+        }
     }
 }

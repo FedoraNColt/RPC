@@ -12,12 +12,19 @@ import org.example.server.server.RPCServer;
 @AllArgsConstructor
 public class NettyRPCServer implements RPCServer {
     private ServiceProvider serviceProvider;
+    private NioEventLoopGroup bossGroup;
+    private NioEventLoopGroup workerGroup;
+    private ChannelFuture serverChannelFuture;
+
+    public NettyRPCServer(ServiceProvider serviceProvider) {
+        this.serviceProvider = serviceProvider;
+        this.bossGroup = new NioEventLoopGroup();
+        this.workerGroup = new NioEventLoopGroup();
+    }
 
     @Override
     public void start(int port) {
-        NioEventLoopGroup bossGroup = new NioEventLoopGroup();
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
-        System.out.println("Netty RPC Server started on port " + port);
+        System.out.println("Starting Netty RPC Server on port " + port);
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -25,19 +32,46 @@ public class NettyRPCServer implements RPCServer {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new NettyServerInitializer(serviceProvider));
 
-            ChannelFuture channelFuture = bootstrap.bind(port).sync();
-            channelFuture.channel().closeFuture().sync();
+            serverChannelFuture = bootstrap.bind(port).sync();
+            System.out.println("Netty RPC Server started successfully on port " + port);
+            
+            // Add shutdown hook for graceful shutdown
+            Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
+            
+            serverChannelFuture.channel().closeFuture().sync();
 
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
+            System.err.println("Server startup interrupted: " + e.getMessage());
+            throw new RuntimeException("Failed to start server", e);
+        } catch (Exception e) {
+            System.err.println("Failed to start server on port " + port + ": " + e.getMessage());
+            throw new RuntimeException("Failed to start server", e);
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            stop();
         }
     }
 
     @Override
     public void stop() {
-
+        System.out.println("Shutting down Netty RPC Server...");
+        
+        try {
+            if (serverChannelFuture != null && serverChannelFuture.channel().isOpen()) {
+                serverChannelFuture.channel().close().sync();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("Error closing server channel: " + e.getMessage());
+        }
+        
+        if (bossGroup != null && !bossGroup.isShutdown()) {
+            bossGroup.shutdownGracefully();
+        }
+        if (workerGroup != null && !workerGroup.isShutdown()) {
+            workerGroup.shutdownGracefully();
+        }
+        
+        System.out.println("Netty RPC Server shutdown completed.");
     }
 }

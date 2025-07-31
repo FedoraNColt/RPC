@@ -58,5 +58,13 @@ public class ConsumerTest {
         }
 
         log.info("All tasks completed. Done!");
+        
+        // Properly shutdown the Netty client to avoid resource leaks
+        try {
+            org.example.client.rpcClient.impl.NettyRPCClient.shutdown();
+            log.info("Netty client shutdown completed.");
+        } catch (Exception e) {
+            log.error("Error during Netty client shutdown", e);
+        }
     }
 }
