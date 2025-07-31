@@ -48,7 +48,7 @@ public class CircuitBreaker {
                 System.out.println("Circuit breaker is OPEN. Request denied.");
                 return false;
             case HALF_OPEN:
-                requestCount.incrementAndGet();
+                // In HALF_OPEN state, allow the request - requestCount will be incremented in recordSuccess/recordFailure
                 System.out.println("HALF_OPEN state: Allowing limited request. Request count: " + requestCount.get());
                 return true;
             case CLOSED:
@@ -64,17 +64,19 @@ public class CircuitBreaker {
      */
     public synchronized void recordSuccess() {
         if (state == CircuitBreakerState.HALF_OPEN) {
+            requestCount.incrementAndGet();
             successCount.incrementAndGet();
             System.out.println("HALF_OPEN state: Recorded success.\nSuccess count: " + successCount.get() +
                     " out of " + requestCount.get() + " requests.");
-            // If success rate meets or exceeds the threshold, transition to CLOSED state
-            if (successCount.get() >= halfOpenSuccessRate * requestCount.get()) {
+            // If the success rate meets or exceeds the threshold, transition to CLOSED state
+            if (requestCount.get() >= 1 && successCount.get() >= halfOpenSuccessRate * requestCount.get()) {
                 System.out.println("Success threshold met. Transitioning to CLOSED state.");
                 state = CircuitBreakerState.CLOSED; // Restore normal operation
                 resetCounts();
             }
         } else if (state == CircuitBreakerState.CLOSED) {
-            resetCounts();
+            // In CLOSED state, reset failure count on successful request
+            failureCount.set(0);
         }
     }
 
@@ -85,12 +87,16 @@ public class CircuitBreaker {
     public synchronized void recordFailure() {
         lastFailureTime = System.currentTimeMillis();// Record failure timestamp
         failureCount.incrementAndGet(); // Increment failure count
-        System.out.println("Failure recorded. Current failure count: " + failureCount);
+        System.out.println("Failure recorded. Current failure count: " + failureCount.get());
+        
         if (state == CircuitBreakerState.HALF_OPEN) {
+            requestCount.incrementAndGet();
             // If a failure occurs in HALF_OPEN, transition to OPEN
+            System.out.println("Failure in HALF_OPEN state. Transitioning to OPEN state.");
             state = CircuitBreakerState.OPEN;
-        } else if (failureCount.get() >= failureThreshold) {
+        } else if (state == CircuitBreakerState.CLOSED && failureCount.get() >= failureThreshold) {
             // If failures exceed the threshold, transition to OPEN
+            System.out.println("Failure threshold exceeded. Transitioning to OPEN state.");
             state = CircuitBreakerState.OPEN;
         }
     }
